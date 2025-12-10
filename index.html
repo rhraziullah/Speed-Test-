@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Test V10 - Smooth</title>
+    <title>REAL Speed Test V11</title>
     <style>
         :root { --primary: #00ff88; --secondary: #00d2ff; --bg: #050505; --card: #151515; --text: #fff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
@@ -74,7 +74,6 @@
         .stat-card div { font-size: 20px; font-weight: bold; }
         
         .active-card { border-color: var(--primary); background: #1f1f1f; }
-        @keyframes pulse { 50% { opacity: 0.5; } }
     </style>
 </head>
 <body>
@@ -107,12 +106,14 @@
     </div>
 
     <script>
-        let dlSpeedFinal = 0;
         const spinner = document.getElementById('spinner');
         const meterBox = document.getElementById('meterBox');
-        const TEST_DURATION = 10000; 
-
-        // Location Init
+        
+        // Settings
+        const FILE_URL = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg";
+        const FILE_SIZE = 5245329 * 8; // Size in bits (approx 5MB)
+        
+        // Location
         fetch('https://ipwho.is/').then(r=>r.json()).then(d=>{
             if(d.success) {
                 document.getElementById('loc').innerHTML = `📍 <span class="highlight">${d.city}</span>`;
@@ -133,82 +134,125 @@
             fetch(location.href + '?' + Math.random()).then(() => {
                 const p = Date.now() - s;
                 document.getElementById('vPing').innerText = p + " ms";
-                startDownload();
+                startDownloadLoop();
             });
         }
 
-        function startDownload() {
+        // --- REAL DOWNLOAD LOOP ---
+        function startDownloadLoop() {
             updateStatus("DOWNLOADING", "#00ff88");
             document.getElementById('cDl').classList.add('active-card');
             meterBox.classList.add('rotate-dl');
-            spinner.style.opacity = '1';
             spinner.style.borderColor = '#00ff88';
+            spinner.style.opacity = '1';
 
-            const img = new Image();
-            const src = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg?r=" + Math.random();
-            const start = Date.now();
-            img.src = src;
+            let totalBitsLoaded = 0;
+            let startTime = Date.now();
+            let endTime = startTime + 10000; // Run for 10 seconds exactly
+            let spinnerDeg = 0;
 
-            let p = 0;
-            const startTime = Date.now();
-            
-            // Interval changed to 200ms (Slow update)
-            const anim = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                
-                // Spinner rotates smoothly
-                p += 3; 
-                spinner.style.transform = `rotate(${p * 5}deg)`;
-                
-                // Numbers change slowly
-                document.getElementById('liveVal').innerText = (Math.random()*15 + 10).toFixed(1);
-
-                if (elapsed >= TEST_DURATION) {
-                    clearInterval(anim);
+            // This function downloads file repeatedly until time is up
+            function downloadChunk() {
+                if (Date.now() >= endTime) {
+                    // Time over, finish download test
+                    const totalDuration = (Date.now() - startTime) / 1000;
+                    const finalSpeed = (totalBitsLoaded / totalDuration / 1000000).toFixed(2);
                     
-                    const realDur = (Date.now() - start) / 1000;
-                    let finalSpeed = (45 + Math.random()*10).toFixed(2); 
-                    if(!img.complete) finalSpeed = (10 + Math.random()*5).toFixed(2);
-
-                    dlSpeedFinal = parseFloat(finalSpeed);
                     document.getElementById('liveVal').innerText = finalSpeed;
                     document.getElementById('vDl').innerText = finalSpeed + " Mbps";
                     
                     meterBox.classList.remove('rotate-dl');
                     document.getElementById('cDl').classList.remove('active-card');
-                    
-                    setTimeout(startUpload, 1000);
+                    startUploadLoop(finalSpeed); // Pass speed to help upload config
+                    return;
                 }
-            }, 200); // <-- This 200 is the key (Slower updates)
+
+                const chunkStart = Date.now();
+                const img = new Image();
+                // Random param prevents caching = REAL DATA
+                img.src = FILE_URL + "?r=" + Math.random(); 
+                
+                img.onload = function() {
+                    const chunkEnd = Date.now();
+                    totalBitsLoaded += FILE_SIZE;
+                    
+                    // Calculate live speed based on total progress
+                    const elapsed = (chunkEnd - startTime) / 1000;
+                    const currentSpeed = (totalBitsLoaded / elapsed / 1000000).toFixed(2);
+                    
+                    // Update UI
+                    document.getElementById('liveVal').innerText = currentSpeed;
+                    spinnerDeg += 15;
+                    spinner.style.transform = `rotate(${spinnerDeg}deg)`;
+                    
+                    // Immediate recursive call
+                    downloadChunk();
+                };
+
+                img.onerror = function() {
+                    // Retry on error
+                    downloadChunk();
+                }
+            }
+
+            // Start the loop
+            downloadChunk();
         }
 
-        function startUpload() {
+        // --- REAL UPLOAD LOOP ---
+        function startUploadLoop(dlSpeed) {
             updateStatus("UPLOADING", "#00d2ff");
             document.getElementById('cUl').classList.add('active-card');
             meterBox.classList.add('rotate-ul');
             spinner.style.borderColor = '#00d2ff';
 
-            const startTime = Date.now();
-            const data = new Array(200000).join("x");
-            fetch("https://httpbin.org/post", { method: 'POST', body: data }).catch(e=>{});
+            let startTime = Date.now();
+            let endTime = startTime + 10000;
+            let totalBitsUploaded = 0;
+            let spinnerDeg = 0;
+            
+            // Generate 1MB dummy data
+            const data = new Array(1000000).join("x"); 
+            const payloadSize = data.length * 8; 
 
-            let p = 0;
-            // Interval changed to 200ms (Slow update)
-            const anim = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                
-                p -= 3;
-                spinner.style.transform = `rotate(${p * 5}deg)`;
+            function uploadChunk() {
+                if (Date.now() >= endTime) {
+                    const totalDuration = (Date.now() - startTime) / 1000;
+                    // If no data uploaded (blocked), fallback to 0
+                    let finalSpeed = totalBitsUploaded > 0 
+                        ? (totalBitsUploaded / totalDuration / 1000000).toFixed(2) 
+                        : "0.00";
 
-                let tempVal = (dlSpeedFinal / 2) + (Math.random() * 5);
-                document.getElementById('liveVal').innerText = tempVal.toFixed(1);
-
-                if (elapsed >= TEST_DURATION) {
-                    clearInterval(anim);
-                    const ulSpeed = (dlSpeedFinal / 1.5).toFixed(2);
-                    finish(ulSpeed);
+                    finish(finalSpeed);
+                    return;
                 }
-            }, 200); // <-- Slow update here too
+
+                // Upload to httpbin
+                fetch("https://httpbin.org/post", { method: 'POST', body: data })
+                .then(r => {
+                    if(r.ok) {
+                        totalBitsUploaded += payloadSize;
+                        
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const currentSpeed = (totalBitsUploaded / elapsed / 1000000).toFixed(2);
+                        
+                        document.getElementById('liveVal').innerText = currentSpeed;
+                        spinnerDeg -= 15;
+                        spinner.style.transform = `rotate(${spinnerDeg}deg)`;
+                        
+                        uploadChunk();
+                    } else {
+                        // Server busy, retry
+                        uploadChunk(); 
+                    }
+                })
+                .catch(e => {
+                    // Upload failed (CORS/Network), try again
+                    uploadChunk();
+                });
+            }
+
+            uploadChunk();
         }
 
         function finish(finalSpeed) {
