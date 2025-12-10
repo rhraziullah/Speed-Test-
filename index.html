@@ -207,4 +207,38 @@
                 const current = (target * (p/100)).toFixed(1);
                 document.getElementById('liveVal').innerText = current;
 
-                if(p >= 1
+                if(p >= 100) {
+                    clearInterval(anim);
+                    finish(target);
+                }
+            }, 50);
+        }
+
+        function finish(finalSpeed) {
+            document.getElementById('liveVal').innerText = finalSpeed;
+            document.getElementById('vUl').innerText = finalSpeed + " Mbps";
+            document.getElementById('cUl').classList.remove('active-card');
+            updateStatus("COMPLETED", "#fff");
+            spinner.style.opacity = '0';
+            
+            setTimeout(() => {
+                document.getElementById('readout').style.display = 'none';
+                document.getElementById('startBtn').style.display = 'block';
+                document.getElementById('startBtn').innerText = "AGAIN";
+            }, 3000);
+        }
+
+        function updateStatus(msg, col) {
+            const el = document.getElementById('statusMsg');
+            el.innerText = msg;
+            el.style.color = col;
+        }
+
+        function resetUI() {
+            document.getElementById('vPing').innerText = "--";
+            document.getElementById('vDl').innerText = "--";
+            document.getElementById('vUl').innerText = "--";
+        }
+    </script>
+</body>
+</html>
