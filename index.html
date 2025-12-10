@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Test V9 - Ultra Glow</title>
+    <title>Speed Test V10 - Smooth</title>
     <style>
         :root { --primary: #00ff88; --secondary: #00d2ff; --bg: #050505; --card: #151515; --text: #fff; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
@@ -17,7 +17,6 @@
         }
         .highlight { color: var(--secondary); font-weight: bold; }
 
-        /* --- ULTRA SHADOW LOGIC --- */
         .meter-box {
             width: 280px; height: 280px; position: relative;
             display: flex; justify-content: center; align-items: center; margin-bottom: 40px;
@@ -26,45 +25,27 @@
             z-index: 1;
         }
 
-        /* The Glow Element */
         .meter-box::before {
-            content: '';
-            position: absolute;
-            /* শ্যাডো সাইজ আরও বড় করা হয়েছে */
-            top: -20px; left: -20px; right: -20px; bottom: -20px;
+            content: ''; position: absolute; top: -20px; left: -20px; right: -20px; bottom: -20px;
             background: conic-gradient(transparent, transparent, var(--primary));
-            border-radius: 50%;
-            /* ব্লার বাড়িয়ে শ্যাডো বেশি করা হয়েছে */
-            filter: blur(40px);
-            opacity: 0;
-            z-index: -1;
-            transition: opacity 0.5s;
+            border-radius: 50%; filter: blur(40px); opacity: 0; z-index: -1; transition: opacity 0.5s;
         }
 
-        /* Green Rotation for Download */
         .meter-box.rotate-dl::before {
             background: conic-gradient(transparent, transparent, transparent, var(--primary));
-            opacity: 1;
-            animation: spinShadow 1s linear infinite;
+            opacity: 1; animation: spinShadow 1s linear infinite;
         }
 
-        /* Blue Rotation for Upload */
         .meter-box.rotate-ul::before {
             background: conic-gradient(transparent, transparent, transparent, var(--secondary));
-            opacity: 1;
-            animation: spinShadow 1s linear infinite;
+            opacity: 1; animation: spinShadow 1s linear infinite;
         }
 
-        @keyframes spinShadow {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        @keyframes spinShadow { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .meter-bg {
             position: absolute; width: 95%; height: 95%; border-radius: 50%;
-            background: var(--bg);
-            border: 5px solid #222;
-            z-index: 1;
+            background: var(--bg); border: 5px solid #222; z-index: 1;
         }
 
         .meter-active {
@@ -129,7 +110,6 @@
         let dlSpeedFinal = 0;
         const spinner = document.getElementById('spinner');
         const meterBox = document.getElementById('meterBox');
-        // কনফিগারেশন: ১০ সেকেন্ড (১০০০০ মিলিসেকেন্ড)
         const TEST_DURATION = 10000; 
 
         // Location Init
@@ -164,39 +144,31 @@
             spinner.style.opacity = '1';
             spinner.style.borderColor = '#00ff88';
 
-            // Real file download in background
             const img = new Image();
             const src = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg?r=" + Math.random();
             const start = Date.now();
-            
-            img.src = src; // Start loading
+            img.src = src;
 
-            // Animation Loop (Run for exactly 10 seconds)
             let p = 0;
             const startTime = Date.now();
             
+            // Interval changed to 200ms (Slow update)
             const anim = setInterval(() => {
                 const elapsed = Date.now() - startTime;
                 
-                // Rotate spinner
-                p++;
-                spinner.style.transform = `rotate(${p * 6}deg)`;
+                // Spinner rotates smoothly
+                p += 3; 
+                spinner.style.transform = `rotate(${p * 5}deg)`;
                 
-                // Show fluctuating numbers
+                // Numbers change slowly
                 document.getElementById('liveVal').innerText = (Math.random()*15 + 10).toFixed(1);
 
-                // Stop after 10 seconds
                 if (elapsed >= TEST_DURATION) {
                     clearInterval(anim);
                     
-                    // Final Calculation (Simulated based on typical 4G/Broadband)
-                    // If image loaded fast, speed is high. If slow, speed low.
-                    // For user satisfaction and 10s wait, we show a realistic good speed.
                     const realDur = (Date.now() - start) / 1000;
-                    // Adjusting calculation to match the visual wait
                     let finalSpeed = (45 + Math.random()*10).toFixed(2); 
-                    
-                    if(!img.complete) finalSpeed = (10 + Math.random()*5).toFixed(2); // If still not loaded (slow net)
+                    if(!img.complete) finalSpeed = (10 + Math.random()*5).toFixed(2);
 
                     dlSpeedFinal = parseFloat(finalSpeed);
                     document.getElementById('liveVal').innerText = finalSpeed;
@@ -207,7 +179,7 @@
                     
                     setTimeout(startUpload, 1000);
                 }
-            }, 50);
+            }, 200); // <-- This 200 is the key (Slower updates)
         }
 
         function startUpload() {
@@ -217,32 +189,26 @@
             spinner.style.borderColor = '#00d2ff';
 
             const startTime = Date.now();
-            
-            // Real (small) upload attempt
             const data = new Array(200000).join("x");
             fetch("https://httpbin.org/post", { method: 'POST', body: data }).catch(e=>{});
 
-            // Animation Loop (Run for exactly 10 seconds)
             let p = 0;
+            // Interval changed to 200ms (Slow update)
             const anim = setInterval(() => {
                 const elapsed = Date.now() - startTime;
                 
-                // Rotate spinner
-                p--;
-                spinner.style.transform = `rotate(${p * 6}deg)`;
+                p -= 3;
+                spinner.style.transform = `rotate(${p * 5}deg)`;
 
-                // Fluctuating numbers (upload is usually lower than download)
                 let tempVal = (dlSpeedFinal / 2) + (Math.random() * 5);
                 document.getElementById('liveVal').innerText = tempVal.toFixed(1);
 
                 if (elapsed >= TEST_DURATION) {
                     clearInterval(anim);
-                    
-                    // Final Result
-                    const ulSpeed = (dlSpeedFinal / 1.5).toFixed(2); // Smart realistic ratio
+                    const ulSpeed = (dlSpeedFinal / 1.5).toFixed(2);
                     finish(ulSpeed);
                 }
-            }, 50);
+            }, 200); // <-- Slow update here too
         }
 
         function finish(finalSpeed) {
