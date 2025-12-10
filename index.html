@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Internet Speed Test - With Location</title>
+    <style>
+        /* CSS Design - Speed.is Inspired Dark Theme */
+        :root {
+            --primary: #00d2ff;     /* Cyan for Download */
+            --secondary: #bd00ff;   /* Purple for Upload */
+            --bg: #0f0f12;
+            --card-bg: #1a1a20;
+            --text: #ffffff;
+            --text-dim: #a0a0b0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+
+        .container {
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        /* Location Info Box */
+        .client-info {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            font-size: 14px;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px;
+            border-radius: 50px;
+            width: fit-content;
+            margin-left: auto;
+            margin-right: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .client-info span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .highlight {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* The Circular Gauge */
+        .gauge-wrapper {
+            position: relative;
+            width: 260px;
+            height: 260px;
+            margin: 0 auto 40px;
+            border-radius: 50%;
+            background: conic-gradient(var(--card-bg) 0deg, var(--card-bg) 360deg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            transition: box-shadow 0.3s ease;
+        }
+
+        .gauge-wrapper.downloading { box-shadow: 0 0 50px rgba(0, 210, 255, 0.3); }
+        .gauge-wrapper.uploading { box-shadow: 0 0 50px rgba(189, 0, 255, 0.3); }
+
+        .gauge-overlay {
+            position: absolute;
+            width: 240px;
+            height: 240px;
+            background-color: var(--bg);
+            border-radius: 50%;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Start Button & Text */
+        #startBtn {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            background: transparent;
+            border: 2px solid var(--primary);
+            padding: 15px 40px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+        }
+
+        #startBtn:hover {
+            background: var(--primary);
+            color: var(--bg);
+            box-shadow: 0 0 20px var(--primary);
+        }
+
+        .speed-display {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .speed-value {
+            font-size: 55px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1;
+        }
+
+        .speed-unit {
+            font-size: 16px;
+            color: var(--text-dim);
+            margin-top: 5px;
+        }
+
+        .status-text {
+            margin-top: 10px;
+            font-size: 14px;
+            color: var(--primary);
+            animation: pulse 1s infinite;
+        }
+
+        /* Result Cards Grid */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+            opacity: 0.3;
+            transition: opacity 0.3s;
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border-bottom: 3px solid transparent;
+        }
+
+        .result-card.ping { border-color: #ffffff; }
+        .result-card.down { border-color: var(--primary); }
+        .result-card.up { border-color: var(--secondary); }
+
+        .result-label {
+            display: block;
+            font-size: 11px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+
+        .result-data {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        /* Progress Ring */
+        .progress-ring {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: transparent;
+            z-index: 1;
+            transition: background 0.1s linear;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SPEED TEST</h1>
+
+        <div class="client-info">
+            <span id="userLocation">📍 Detecting...</span>
+            <span style="opacity: 0.3">|</span>
+            <span id="userISP">🌐 Detecting...</span>
+        </div>
+
+        <div class="gauge-wrapper" id="gauge">
+            <div class="progress-ring" id="progressRing"></div>
+            <div class="gauge-overlay">
+                <button id="startBtn" onclick="startTest()">GO</button>
+                
+                <div class="speed-display" id="speedDisplay">
+                    <span class="speed-value" id="liveSpeed">0.0</span>
+                    <span class="speed-unit">Mbps</span>
+                    <span class="status-text" id="statusText">Idle</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-grid" id="resultsGrid">
+            <div class="result-card ping">
+                <span class="result-label">Ping</span>
+                <span class="result-data" id="pingResult">--</span>
+            </div>
+            <div class="result-card down">
+                <span class="result-label">Download</span>
+                <span class="result-data" id="downloadResult">--</span>
+            </div>
+            <div class="result-card up">
+                <span class="result-label">Upload</span>
+                <span class="result-data" id="uploadResult">--</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CONFIGURATION
+        const downloadTestUrl = "https://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg"; 
+        const uploadTestUrl = "https://httpbin.org/post";
+        
+        const startBtn = document.getElementById('startBtn');
+        const speedDisplay = document.getElementById('speedDisplay');
+        const liveSpeedEl = document.getElementById('liveSpeed');
+        const statusText = document.getElementById('statusText');
+        const progressRing = document.getElementById('progressRing');
+        const gauge = document.getElementById('gauge');
+        const resultsGrid = document.getElementById('resultsGrid');
+        
+        let startTime, endTime, animationInterval;
+
+        // 1. পেজ লোড হলেই লোকেশন ডিটেক্ট করবে
+        window.onload = function() {
+            fetch('https://ipapi.co/json/')
+                .then(response => response.json())
+                .then(data => {
+                    // লোকেশন এবং আইএসপি আপডেট করা
+                    const city = data.city || "Unknown City";
+                    const country = data.country_name || "Unknown Country";
+                    const isp = data.org || "Unknown ISP";
+
+                    document.getElementById('userLocation').innerHTML = `📍 <span class="highlight">${city}, ${country}</span>`;
+                    document.getElementById('userISP').innerHTML = `🌐 <span class="highlight">${isp}</span>`;
+                })
+                .catch(error => {
+                    console.error('Error fetching location:', error);
+                    document.getElementById('userLocation').innerText = "📍 Location not found";
+                    document.getElementById('userISP').innerText = "🌐 ISP not found";
+                });
+        };
+
+        function startTest() {
+            startBtn.style.display = 'none';
+            speedDisplay.style.display = 'flex';
+            resultsGrid.style.opacity = '1';
+            
+            document.getElementById('pingResult').innerText = "--";
+            document.getElementById('downloadResult').innerText = "--";
+            document.getElementById('uploadResult').innerText = "--";
+            
+            updateGauge(0, 'var(--primary)');
+            measurePing();
+        }
+
+        // --- PING TEST ---
+        function measurePing() {
+            statusText.innerText = "PING";
+            statusText.style.color = "#fff";
+            const pStart = new Date().getTime();
+            
+            fetch(window.location.href + "?" + Math.random()) 
+            .then(() => {
+                const pEnd = new Date().getTime();
+                const pingTime = pEnd - pStart;
+                document.getElementById('pingResult').innerText = Math.round(pingTime) + " ms";
+                measureDownload();
+            })
+            .catch(() => {
+                document.getElementById('pingResult').innerText = "Err";
+                measureDownload();
+            });
+        }
+
+        // --- DOWNLOAD TEST ---
+        function measureDownload() {
+            statusText.innerText = "DOWNLOADING";
+            statusText.style.color = "var(--primary)";
+            gauge.className = "gauge-wrapper downloading";
+            
+            let fakeProgress = 0;
+            animationInterval = setInterval(() => {
+                fakeProgress += Math.random() * 3;
+                if(fakeProgress > 90) fakeProgress = 90;
+                updateGauge(fakeProgress, 'var(--primary)');
+                liveSpeedEl.innerText = (Math.random() * 15 + 5).toFixed(1);
+            }, 100);
+
+            const downloadSrc = downloadTestUrl + "?n=" + Math.random();
+            const downloadImg = new Image();
+            startTime = (new Date()).getTime();
+
+            downloadImg.onload = function () {
+                endTime = (new Date()).getTime();
+                clearInterval(animationInterval);
+                
+                const duration = (endTime - startTime) / 1000;
+                const sizeInBytes = 5245329; 
+                const speedMbps = ((sizeInBytes * 8) / duration / (1024 * 1024)).toFixed(2);
+                
+                updateGauge(100, 'var(--primary)');
+                liveSpeedEl.innerText = speedMbps;
+                document.getElementById('downloadResult').innerText = speedMbps + " Mbps";
+                
+                setTimeout(() => { measureUpload(); }, 1000);
+            }
+            
+            downloadImg.onerror = function() {
+                clearInterval(animationInterval);
+                document.getElementById('downloadResult').innerText = "Fail";
+                measureUpload(); 
+            }
+            downloadImg.src = downloadSrc;
+        }
+
+        // --- UPLOAD TEST ---
+        function measureUpload() {
+            statusText.innerText = "UPLOADING";
+            statusText.style.color = "var(--secondary)";
+            gauge.className = "gauge-wrapper uploading";
+            updateGauge(0, 'var(--secondary)');
+            liveSpeedEl.innerText = "0.0";
+
+            const dataSize = 2000000; 
+            const dummyData = new Array(dataSize).join("a"); 
+            
+            let fakeProgress = 0;
+            animationInterval = setInterval(() => {
+                fakeProgress += Math.random() * 2;
+                if(fakeProgress > 80) fakeProgress = 80;
+                updateGauge(fakeProgress, 'var(--secondary)');
+                liveSpeedEl.innerText = (Math.random() * 10 + 2).toFixed(1);
+            }, 100);
+
+            startTime = (new Date()).getTime();
+
+            fetch(uploadTestUrl, {
+                method: 'POST',
+                body: dummyData
+            })
+            .then(response => {
+                endTime = (new Date()).getTime();
+                clearInterval(animationInterval);
+
+                const duration = (endTime - startTime) / 1000;
+                const speedMbps = ((dataSize * 8) / duration / (1024 * 1024)).toFixed(2);
+
+                updateGauge(100, 'var(--secondary)');
+                liveSpeedEl.innerText = speedMbps;
+                document.getElementById('uploadResult').innerText = speedMbps + " Mbps";
+                finishTest();
+            })
+            .catch(error => {
+                clearInterval(animationInterval);
+                document.getElementById('uploadResult').innerText = "Fail";
+                finishTest();
+            });
+        }
+
+        function finishTest() {
+            statusText.innerText = "COMPLETED";
+            statusText.style.color = "#fff";
+            gauge.className = "gauge-wrapper";
+            
+            setTimeout(() => {
+                startBtn.innerText = "AGAIN";
+                startBtn.style.display = 'block';
+                speedDisplay.style.display = 'none';
+                updateGauge(0, 'transparent');
+            }, 3000);
+        }
+
+        function updateGauge(percent, color) {
+            progressRing.style.background = `conic-gradient(${color} ${percent * 3.6}deg, transparent 0deg)`;
+        }
+
+    </script>
+</body>
+</html>
